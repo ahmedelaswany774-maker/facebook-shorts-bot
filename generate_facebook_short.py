@@ -176,6 +176,17 @@ def post_to_facebook_page(video_path: Path, caption: str) -> dict:
             files={"source": video_file},
             timeout=600,
         )
+    if not resp.ok:
+        # Print Facebook's actual error payload so we can diagnose (bad
+        # token, missing permission, unsupported format, etc.) instead of
+        # just seeing a generic "400 Bad Request".
+        print("---- Facebook API error response ----")
+        print(f"Status: {resp.status_code}")
+        try:
+            print(json.dumps(resp.json(), ensure_ascii=False, indent=2))
+        except ValueError:
+            print(resp.text)
+        print("---------------------------------------")
     resp.raise_for_status()
     return resp.json()
 
