@@ -1,0 +1,52 @@
+name: Generate & Publish Facebook Short
+
+on:
+  workflow_dispatch:
+    inputs:
+      topic:
+        description: "موضوع اختياري بالعربي (سيب فاضي لموضوع عشوائي)"
+        required: false
+        default: ""
+  schedule:
+    # 4 مرات يوميًا بتوقيت القاهرة تقريبًا (UTC+2): 9ص, 1م, 5م, 9م
+    # ملحوظة: لو القاهرة على توقيت صيفي (UTC+3) الأوقات هتتزحلق ساعة،
+    # عدّل الأرقام دي لو حابب توقيت أدق.
+    - cron: "0 7 * * *"
+    - cron: "0 11 * * *"
+    - cron: "0 15 * * *"
+    - cron: "0 19 * * *"
+
+jobs:
+  generate-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run generator + publisher
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          FB_PAGE_ACCESS_TOKEN: ${{ secrets.FB_PAGE_ACCESS_TOKEN }}
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+        run: python generate_facebook_short.py "${{ github.event.inputs.topic }}"
+
+      - name: Upload video + caption as backup artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: facebook-short-${{ github.run_id }}
+          path: ~/facebook_shorts/**
+          retention-days: 7
+          if-no-files-found: ignore
