@@ -1,24 +1,19 @@
 #!/usr/bin/env python3
 """
 generate_facebook_short.py
-...
-"""
-cd ~/facebook-shorts-bot
-cat > generate_facebook_short.py << 'PYEOF'
-#!/usr/bin/env python3
-"""
-generate_facebook_short.py
 
 End-to-end generator for a single Facebook-ready short vertical video +
-caption, meant to run in Termux or GitHub Actions. Mirrors the user's
-existing YouTube Shorts pipeline (Groq -> gTTS -> Pollinations.ai -> FFmpeg).
-Publishes ONLY to a Facebook Page via the official Graph API -- never to
-a personal profile, since Meta does not support that.
+caption, meant to run in Termux (or any Linux/Android shell with Python +
+ffmpeg installed). Mirrors the user's existing YouTube Shorts pipeline
+(Groq -> gTTS -> Pollinations.ai -> FFmpeg) but stops at producing local
+files for manual posting -- it NEVER attempts to publish to Facebook.
+
+Requirements (all free / zero-cost):
+    pip install requests gTTS --break-system-packages   # on Termux/Android
+    ffmpeg must be installed and on PATH
 
 Env vars required:
     GROQ_API_KEY
-    FB_PAGE_ACCESS_TOKEN   (optional -- enables auto-publish to the Page)
-    FB_PAGE_ID             (optional -- enables auto-publish to the Page)
 
 Usage:
     python generate_facebook_short.py ["optional topic in Arabic"]
@@ -87,6 +82,7 @@ def call_groq(topic: str | None) -> dict:
     resp.raise_for_status()
     raw = resp.json()["choices"][0]["message"]["content"]
 
+    # Known Groq quirk: responses sometimes wrapped in ```json ... ``` fences.
     cleaned = raw.replace("```json", "").replace("```", "").strip()
     return json.loads(cleaned)
 
@@ -96,6 +92,7 @@ def generate_voiceover(script_text: str, out_path: Path) -> float:
     tts = gTTS(text=script_text, lang="ar")
     tts.save(str(out_path))
 
+    # Duration via ffprobe (part of the ffmpeg install)
     result = subprocess.run(
         [
             "ffprobe", "-v", "error", "-show_entries", "format=duration",
@@ -124,7 +121,7 @@ def generate_images(script_text: str, out_dir: Path, num_images: int = 12) -> li
         r.raise_for_status()
         img_path.write_bytes(r.content)
         paths.append(img_path)
-        time.sleep(1)
+        time.sleep(1)  # be polite to the free endpoint
     return paths
 
 
@@ -132,11 +129,13 @@ def assemble_video(images: list[Path], audio_path: Path, audio_duration: float, 
     """Combine images + narration into a vertical 1080x1920 mp4 with ffmpeg."""
     per_image = audio_duration / len(images)
 
+    # Build an ffmpeg concat file with per-image duration.
     concat_file = out_path.parent / "concat_list.txt"
     with open(concat_file, "w") as f:
         for img in images:
             f.write(f"file '{img.resolve()}'\n")
             f.write(f"duration {per_image}\n")
+        # ffmpeg concat demuxer requires the last file listed again w/o duration
         f.write(f"file '{images[-1].resolve()}'\n")
 
     silent_video = out_path.parent / "silent.mp4"
@@ -149,6 +148,9 @@ def assemble_video(images: list[Path], audio_path: Path, audio_duration: float, 
         check=True, capture_output=True,
     )
 
+    # Mux narration; -shortest guards against tiny rounding drift, but since
+    # per_image was computed from audio_duration this should match closely.
+    # Pad the LAST image rather than trim audio if there's a small mismatch.
     subprocess.run(
         [
             "ffmpeg", "-y", "-i", str(silent_video), "-i", str(audio_path),
@@ -166,6 +168,7 @@ def publish_to_facebook_page(video_path: Path, caption: str) -> str:
     """
     Upload and publish a video to a Facebook PAGE (not a personal profile)
     via the official Graph API. Requires FB_PAGE_ACCESS_TOKEN + FB_PAGE_ID.
+    Returns the published post/video id.
     """
     if not FB_PAGE_ACCESS_TOKEN or not FB_PAGE_ID:
         raise RuntimeError(
@@ -215,6 +218,7 @@ def main():
     caption_path = out_dir / "caption.txt"
     caption_path.write_text(data["caption"], encoding="utf-8")
 
+    # Clean up intermediate images/audio, keep only the final deliverables.
     for img in images:
         img.unlink(missing_ok=True)
     audio_path.unlink(missing_ok=True)
