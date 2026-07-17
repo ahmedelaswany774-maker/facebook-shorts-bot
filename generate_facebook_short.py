@@ -3,17 +3,15 @@
 generate_facebook_short.py
 
 End-to-end generator for a single Facebook-ready short vertical video +
-caption, meant to run in Termux (or any Linux/Android shell with Python +
-ffmpeg installed). Mirrors the user's existing YouTube Shorts pipeline
-(Groq -> gTTS -> Pollinations.ai -> FFmpeg) but stops at producing local
-files for manual posting -- it NEVER attempts to publish to Facebook.
-
-Requirements (all free / zero-cost):
-    pip install requests gTTS --break-system-packages   # on Termux/Android
-    ffmpeg must be installed and on PATH
+caption, meant to run in Termux or GitHub Actions. Mirrors the user's
+existing YouTube Shorts pipeline (Groq -> gTTS -> Pollinations.ai -> FFmpeg).
+Publishes ONLY to a Facebook Page via the official Graph API -- never to
+a personal profile, since Meta does not support that.
 
 Env vars required:
     GROQ_API_KEY
+    FB_PAGE_ACCESS_TOKEN   (optional -- enables auto-publish to the Page)
+    FB_PAGE_ID             (optional -- enables auto-publish to the Page)
 
 Usage:
     python generate_facebook_short.py ["optional topic in Arabic"]
@@ -34,6 +32,11 @@ from gtts import gTTS
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 GROQ_MODEL = "llama-3.3-70b-versatile"
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+
+# -- Facebook Page publishing (Pages Graph API only -- NEVER personal profiles) --
+FB_PAGE_ACCESS_TOKEN = os.environ.get("FB_PAGE_ACCESS_TOKEN")
+FB_PAGE_ID = os.environ.get("FB_PAGE_ID")
+FB_GRAPH_VERSION = "v21.0"
 
 OUTPUT_ROOT = Path.home() / "facebook_shorts"
 
@@ -152,6 +155,35 @@ def assemble_video(images: list[Path], audio_path: Path, audio_duration: float, 
     concat_file.unlink(missing_ok=True)
 
 
+def publish_to_facebook_page(video_path: Path, caption: str) -> str:
+    """
+    Upload and publish a video to a Facebook PAGE (not a personal profile)
+    via the official Graph API. Requires FB_PAGE_ACCESS_TOKEN + FB_PAGE_ID.
+    """
+    if not FB_PAGE_ACCESS_TOKEN or not FB_PAGE_ID:
+        raise RuntimeError(
+            "FB_PAGE_ACCESS_TOKEN or FB_PAGE_ID is not set. "
+            "This function only publishes to a Facebook Page, never a personal profile."
+        )
+
+    url = f"https://graph-video.facebook.com/{FB_GRAPH_VERSION}/{FB_PAGE_ID}/videos"
+    with open(video_path, "rb") as video_file:
+        resp = requests.post(
+            url,
+            data={
+                "access_token": FB_PAGE_ACCESS_TOKEN,
+                "description": caption,
+            },
+            files={"source": video_file},
+            timeout=300,
+        )
+    resp.raise_for_status()
+    result = resp.json()
+    if "id" not in result:
+        raise RuntimeError(f"Facebook API did not return a video id: {result}")
+    return result["id"]
+
+
 def main():
     topic = sys.argv[1] if len(sys.argv) > 1 else None
 
@@ -180,10 +212,19 @@ def main():
         img.unlink(missing_ok=True)
     audio_path.unlink(missing_ok=True)
 
-    print("\n✅ الفيديو جاهز للنشر اليدوي:")
+    print("\n✅ الفيديو جاهز:")
     print(f"   الفيديو : {video_path}")
     print(f"   الكابشن : {caption_path}")
-    print("\nافتح فيسبوك بإيدك وانشر الفيديو + الكابشن. السكريبت ده مبيعملش نشر تلقائي.")
+
+    if FB_PAGE_ACCESS_TOKEN and FB_PAGE_ID:
+        print("\nجاري النشر على صفحة الفيسبوك...")
+        post_id = publish_to_facebook_page(video_path, data["caption"])
+        print(f"✅ اتنشر بنجاح على الصفحة! Video ID: {post_id}")
+    else:
+        print(
+            "\n(FB_PAGE_ACCESS_TOKEN / FB_PAGE_ID مش متظبطين -- "
+            "الفيديو محفوظ محليًا بس من غير نشر تلقائي.)"
+        )
 
 
 if __name__ == "__main__":
