@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022"],
+    "outDir": "dist",
+    "rootDir": ".",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "declaration": false,
+    "sourceMap": true
+  },
+  "include": [
+    "app/**/*.ts",
+    "content/**/*.ts",
+    "script/**/*.ts",
+    "storyboard/**/*.ts",
+    "voice/**/*.ts",
+    "image/**/*.ts",
+    "video/**/*.ts",
+    "subtitle/**/*.ts",
+    "publish/**/*.ts",
+    "utils/**/*.ts",
+    "config/**/*.ts",
+    "notion/**/*.ts",
+    "workflows/**/*.ts",
+    "prompts/**/*.ts"
+  ],
+  "exclude": ["node_modules", "dist", "output"]
+}
