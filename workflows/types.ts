@@ -8,16 +8,17 @@
 import type { Idea } from "../content/ideaSource.js";
 import type { Research } from "../content/research.js";
 import type { Hook } from "../content/hook.js";
+import type { Script } from "../script/types.js";
 
 export interface PipelineContext {
   idea: Idea;
   research: Research;
   hook: Hook;
+  script: Script;
 
   // Populated by later phases -- left `unknown` until each phase's real
   // module/type exists, so this interface doesn't need to change shape
   // every phase.
-  script?: unknown; // Phase 4
   storyboard?: unknown; // Phase 5
   voice?: unknown; // Phase 6
   subtitle?: unknown; // Phase 7

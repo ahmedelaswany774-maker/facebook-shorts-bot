@@ -28,17 +28,36 @@ globalThis.fetch = async (url: string, init: any) => {
     notionPatchBody = JSON.parse(init.body);
     return { ok: true, json: async () => ({ id: "page-123", url: "https://notion.so/page-123", properties: {} }) };
   }
-  // --- Groq: idea / research / hook, in call order
+  // --- Groq: idea / research / hook / script, in call order
   if (url.includes("api.groq.com")) {
     const body = JSON.parse(init.body);
     const prompt: string = body.messages[0].content;
     if (prompt.includes('"topic"')) {
       return { ok: true, json: async () => ({ choices: [{ message: { content: '{"topic":"لغز اختفاء سفينة"}' } }] }) };
     }
-    if (prompt.includes("keyFacts")) {
+    if (prompt.includes("keyFacts") && !prompt.includes("scenes")) {
       return { ok: true, json: async () => ({ choices: [{ message: { content: '{"angle":"زاوية غامضة","keyFacts":["حقيقة1","حقيقة2"]}' } }] }) };
     }
-    // hook prompt
+    if (prompt.includes('"scenes"')) {
+      return {
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  scenes: [
+                    { durationSec: 6, narration: "هل تعلم أن سفينة اختفت بالكامل؟", imagePrompt: "cinematic foggy ship at sea" },
+                    { durationSec: 8, narration: "في عام معين، اختفت السفينة فجأة.", imagePrompt: "cinematic empty deck, eerie" },
+                  ],
+                }),
+              },
+            },
+          ],
+        }),
+      };
+    }
+    // hook prompt (fallback -- no distinguishing JSON keys)
     return { ok: true, json: async () => ({ choices: [{ message: { content: "هل تعلم أن سفينة اختفت بالكامل؟" } }] }) };
   }
   throw new Error(`Unmocked fetch: ${url}`);
@@ -54,6 +73,10 @@ async function run() {
   assert.strictEqual(ctx.research.angle, "زاوية غامضة");
   assert.strictEqual(ctx.research.keyFacts.length, 2);
   assert.ok(ctx.hook.text.length > 0);
+  assert.strictEqual(ctx.script.scenes.length, 2);
+  assert.strictEqual(ctx.script.scenes[0].id, 1);
+  assert.strictEqual(ctx.script.totalDurationSec, 14);
+  assert.ok(ctx.script.fullNarration.length > 0);
   assert.ok(notionPatchBody, "expected Notion page to be updated with the hook");
 
   console.log("✅ aiPipeline: all checks passed");

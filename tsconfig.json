@@ -26,7 +26,8 @@
     "utils/**/*.ts",
     "config/**/*.ts",
     "notion/**/*.ts",
-    "workflows/**/*.ts"
+    "workflows/**/*.ts",
+    "prompts/**/*.ts"
   ],
   "exclude": ["node_modules", "dist", "output"]
 }

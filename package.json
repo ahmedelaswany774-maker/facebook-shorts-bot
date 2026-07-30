@@ -10,7 +10,8 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/app/main.js",
     "dev": "ts-node --esm app/main.ts",
-    "test:notion": "ts-node --esm notion/notionService.test.ts"
+    "test:notion": "ts-node --esm notion/notionService.test.ts",
+    "test:pipeline": "ts-node --esm workflows/aiPipeline.test.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.5"

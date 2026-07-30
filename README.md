@@ -35,7 +35,14 @@ npm install
 cp .env.example .env   # fill in your keys — see .env.example for the full list
 npm run build
 npm run test:notion
+npm run test:pipeline   # runs Idea -> Research -> Hook with mocked APIs
+npm run dev             # runs the real pipeline against your live Groq + Notion
 ```
+
+The Notion "AI Content Factory — Videos" database is already created for
+you (see `MIGRATION.md`). Set `NOTION_DATABASE_ID` to its ID and make
+sure your Integration is connected to it under the database's "..." →
+Connections menu.
 
 ## Known platform limitation (carried over from the Python pipeline)
 Automated posting via the Facebook Graph API requires Meta Business
