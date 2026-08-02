@@ -1,45 +1,63 @@
 # Roadmap — AI Content Factory
 
-Legend: ✅ done · 🚧 scaffolded (folder + README, no logic yet) · ⬜ not started
+All 10 phases are built, compiled, and tested (`npm test` — 10/10 passing,
+including a full end-to-end run through every phase with real ffmpeg).
 
 | Phase | Description | Status |
 |---|---|---|
 | 1 | Folder restructure | ✅ |
 | 2 | Notion service (create/read/update page, query database) | ✅ tested |
-| 3 | AI Pipeline: Idea → Research → Hook implemented + Notion-synced. Script→Publish wired as typed pass-through, ready for Phases 4-9 to fill in. | ✅ tested |
+| 3 | AI Pipeline: Idea → Research → Hook, Notion-synced | ✅ tested |
 | 4 | Script Generator — scene-based, model decides scene count/duration per topic richness | ✅ tested |
-| 5 | Storyboard Engine — camera movement, transitions, animation type, subtitle timing per shot | 🚧 |
-| 6 | Voice Pipeline — per-sentence TTS, merge, normalize, silence trim | 🚧 |
-| 7 | Subtitle Generator — SRT + animated ASS | 🚧 |
-| 8 | Video Builder — Ken Burns/zoom/pan, cross-fade, blur transition, logo, watermark, music, SFX, animated subtitles | 🚧 |
-| 9 | Publishing — port Facebook Page publisher into `Publisher` interface + add YouTube provider | 🚧 |
-| 10 | Notion Dashboard — sync video status (Draft/Generating/Voice/Video/Publishing/Published/Failed) | 🚧 |
+| 5 | Storyboard Engine — deterministic camera movement, transitions, animation, subtitle timing per shot | ✅ tested |
+| 6 | Voice Pipeline — per-sentence TTS (free Google Translate endpoint), merge, EBU R128 normalize, silence trim | ✅ tested (real ffmpeg) |
+| 7 | Subtitle Generator — SRT + animated ASS (fade-in/out), timed from the Storyboard | ✅ tested |
+| 8 | Video Builder — Ken Burns/zoom/pan (zoompan), cross-fade + blur transitions (xfade), watermark, background music, SFX, burned-in animated subtitles | ✅ tested (real ffmpeg, real rendered mp4) |
+| 9 | Publishing — Facebook Page publisher (faithful port of the existing Python function, unchanged behavior) + free YouTube Data API v3 publisher (OAuth refresh token, no paid tier), behind a common `Publisher` interface | ✅ tested |
+| 10 | Notion Dashboard — Status synced live at every stage (Generating → Voice → Video → Publishing → Published/Failed) | ✅ tested |
 
-## Phase 3 decisions
-- **Idea sourcing**: checks the Notion database first for a page with
-  `Status = Draft` and empty `Video URL` (a topic you queued manually).
-  If none exists, Groq generates a random topic and a new page is
-  created in Notion automatically, so it always shows up on the
-  dashboard either way.
-- Once Hook is generated, the Notion page's `Caption` is updated live
-  so you can watch progress from the Notion board while it runs.
+## How to run it
+```bash
+npm install
+cp .env.example .env   # fill in your keys
+npm run build
+npm test               # runs all 10 phases' test suites, including one full mocked-network / real-ffmpeg run
+npm run dev             # runs the REAL full pipeline: Idea -> ... -> Publish
+npm run dev:draft       # content-only dry run (Idea/Research/Hook/Script), no TTS/image/video/publish cost
+```
 
-## Phase 4 decisions
-- **Scene count / video length**: not fixed. The model decides how many
-  scenes and how long the total video is, based on how much the topic
-  actually warrants (a simple topic might be ~6 scenes / ~1 min, a
-  richer one 20+ scenes / 3-4 min).
+## Design decisions made along the way
+- **Idea sourcing** (Phase 3): checks Notion first for a queued
+  `Status=Draft` page with no `Video URL`; otherwise Groq generates a
+  topic and a new Notion page is created automatically either way.
+- **Scene count / video length** (Phase 4): not fixed — the model
+  decides based on how much the topic warrants.
+- **Storyboard** (Phase 5) is fully deterministic/rule-based, not an AI
+  call — camera movement and transitions rotate through a fixed
+  sequence, subtitle timing comes straight from cumulative scene
+  durations, so it's free and instant.
+- **Voice** (Phase 6) uses the same free endpoint the Python `gTTS`
+  library wraps, called directly — no extra dependency, no paid key.
+- **Video** (Phase 8): `blur` transition maps to ffmpeg's built-in
+  `hblur` xfade transition (a real blur, not a re-badged fade).
+- **Publishing** (Phase 9): Facebook behavior/endpoint is **unchanged**
+  from the existing Python script. YouTube is a new, free (OAuth
+  refresh-token) provider behind the same `Publisher` interface — you
+  can configure one, both, or neither via env vars.
+- **Every network call** (Groq, Notion, Facebook, YouTube) is tested via
+  mocked `fetch`, matching the pattern in `notion/notionService.test.ts`.
+  Every ffmpeg-based step (Voice, Video) is tested against **real**
+  ffmpeg with synthetically generated inputs (no network needed), so
+  those tests catch real filter-graph bugs, not just typos.
 
-## Next step
-Say **"continue with Phase 3"** (or any phase number) and it'll be built
-the same way Phase 1–2 were: real, compiled, tested TypeScript — not
-just stubs — landed as a downloadable update plus upload instructions.
-
-## Constraints carried through every phase
-- No paid services. Where a paid API is the obvious choice, it sits
-  behind an interface (e.g. `ImageProvider`, `VoiceProvider`,
-  `Publisher`) so a free implementation is the default and a paid one
-  can be swapped in later without touching calling code.
-- Facebook Page publishing must keep working at every step.
-- Every module independently testable (see `notion/notionService.test.ts`
-  for the pattern used elsewhere).
+## Known gaps / good next steps (not part of the original 10 phases)
+- `image/imageProvider.ts` (Pollinations.ai) exists because Video needs
+  real images to render against, but "Image Generation" wasn't one of
+  the 10 requested phases — worth reviewing on its own if you want more
+  control over image style/consistency.
+- YouTube publishing needs a one-time OAuth setup (Google Cloud Console
+  → OAuth client → run the consent flow once to get a refresh token).
+  Not automated here since it requires a one-time browser login.
+- No retry/backoff wired into the full pipeline yet if a single stage
+  fails outright (it does mark the Notion page `Failed` with the error,
+  so nothing fails silently).

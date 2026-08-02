@@ -65,8 +65,8 @@ export async function runAiPipeline(): Promise<PipelineContext> {
 
   console.log(`\n✅ Idea/Research/Hook/Script جاهزين -- محفوظين في ${outDir}/pipeline.json`);
   console.log(
-    "⏭️  الخطوة الجاية (Storyboard Engine - Phase 5) لسه محتاجة تتبني.\n" +
-      "   شوف TODO.md."
+    "ℹ️  ده الـ pipeline الخفيف (محتوى بس، من غير صوت/فيديو/نشر).\n" +
+      "   للتشغيل الكامل (Storyboard -> Voice -> Subtitle -> Video -> Publish) شغّل: npm run dev"
   );
 
   return context;

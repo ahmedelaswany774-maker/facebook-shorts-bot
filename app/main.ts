@@ -1,11 +1,14 @@
 /**
  * app/main.ts
- * CLI entry point. `npm run dev` (or `npm run build && npm start`).
+ * CLI entry point for the FULL pipeline (Idea -> ... -> Publish).
+ * `npm run dev` (or `npm run build && npm start`).
+ * For a content-only dry run (no TTS/images/video/publish spend), use
+ * `npm run dev:draft` instead (see app/draftOnly.ts).
  */
 
-import { runAiPipeline } from "../workflows/aiPipeline.js";
+import { runFullPipeline } from "../workflows/fullPipeline.js";
 
-runAiPipeline().catch((err) => {
+runFullPipeline().catch((err) => {
   console.error("❌ Pipeline failed:", err);
   process.exit(1);
 });

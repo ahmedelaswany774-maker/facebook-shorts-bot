@@ -10,8 +10,11 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/app/main.js",
     "dev": "ts-node --esm app/main.ts",
+    "dev:draft": "ts-node --esm app/draftOnly.ts",
+    "test": "npm run build && node dist/notion/notionService.test.js && node dist/workflows/aiPipeline.test.js && node dist/storyboard/storyboardEngine.test.js && node dist/voice/sentenceSplitter.test.js && node dist/voice/voicePipeline.test.js && node dist/subtitle/subtitleGenerators.test.js && node dist/video/ffmpegVideoBuilder.test.js && node dist/publish/publishers.test.js && node dist/notion/dashboardSync.test.js && node dist/workflows/fullPipeline.test.js",
     "test:notion": "ts-node --esm notion/notionService.test.ts",
-    "test:pipeline": "ts-node --esm workflows/aiPipeline.test.ts"
+    "test:pipeline": "ts-node --esm workflows/aiPipeline.test.ts",
+    "test:full": "ts-node --esm workflows/fullPipeline.test.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.5"

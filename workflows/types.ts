@@ -9,19 +9,19 @@ import type { Idea } from "../content/ideaSource.js";
 import type { Research } from "../content/research.js";
 import type { Hook } from "../content/hook.js";
 import type { Script } from "../script/types.js";
+import type { Storyboard } from "../storyboard/types.js";
+import type { VoiceResult } from "../voice/types.js";
+import type { VideoResult } from "../video/types.js";
+import type { PublishResult } from "../publish/types.js";
 
 export interface PipelineContext {
   idea: Idea;
   research: Research;
   hook: Hook;
   script: Script;
-
-  // Populated by later phases -- left `unknown` until each phase's real
-  // module/type exists, so this interface doesn't need to change shape
-  // every phase.
-  storyboard?: unknown; // Phase 5
-  voice?: unknown; // Phase 6
-  subtitle?: unknown; // Phase 7
-  video?: unknown; // Phase 8
-  publish?: unknown; // Phase 9
+  storyboard?: Storyboard;
+  voice?: VoiceResult;
+  subtitle?: { srtPath: string; assPath: string };
+  video?: VideoResult;
+  publish?: PublishResult[];
 }
